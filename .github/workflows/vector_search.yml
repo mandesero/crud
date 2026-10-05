@@ -1,0 +1,64 @@
+name: vector-search
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  vector-search:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      image: docker.io/tarantool/testing:ubuntu-focal
+      options: '--init --privileged'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: mandesero/tarantool
+          ref: fae93a25e89211a3fb39ed1684b942a217eabf66
+          path: .vector-core
+          submodules: recursive
+      - uses: ./.vector-core/.github/actions/install-deps-debian
+      - name: Build native VECTOR support
+        run: |
+          cmake -S .vector-core -B .vector-core/build \
+            -DCMAKE_BUILD_TYPE=Debug
+          cmake --build .vector-core/build --target tarantool -j 8
+      - uses: actions/checkout@v4
+        with:
+          repository: mandesero/vshard
+          ref: 674cda708d957cc145aa4f0622804bb5c2f8007a
+          path: .vector-vshard
+          submodules: recursive
+      - name: Install focused test dependencies
+        run: |
+          apt-get install -y python3-pip
+          python3 -m pip install 'tarantool==0.12'
+          luarocks --lua-version=5.1 --tree="$PWD/.vector-rocks" \
+            install checks 3.3.0
+          luarocks --lua-version=5.1 --tree="$PWD/.vector-rocks" \
+            install errors 2.2.1
+          luarocks --lua-version=5.1 --tree="$PWD/.vector-rocks" \
+            install luatest 1.0.1
+      - name: Run CRUD VECTOR contracts and cluster benchmark
+        shell: bash
+        run: |
+          eval "$(luarocks --lua-version=5.1 --tree="$PWD/.vector-rocks" path)"
+          export PATH="$PWD/.vector-core/build/src:$PATH"
+          export LUA_PATH="$PWD/?.lua;$PWD/?/init.lua;$PWD/.vector-vshard/?.lua;$PWD/.vector-vshard/?/init.lua;$LUA_PATH"
+          luatest_dir="$(luarocks --lua-version=5.1 \
+            --tree="$PWD/.vector-rocks" show --rock-dir luatest)"
+          tarantool "$luatest_dir/bin/luatest" -v test/vector \
+            test/unit/vector_unavailable_test.lua test/unit/privileges_test.lua
+          export VSHARD_ROOT="$PWD/.vector-vshard"
+          export TARANTOOL_BIN="$PWD/.vector-core/build/src/tarantool"
+          export CRUD_VECTOR_BENCH_SCRIPT="$PWD/perf/vector_search.lua"
+          export CRUD_VECTOR_BENCH_OUTPUT="$PWD/vector-search.json"
+          test/vshard-vector/run.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vector-search-results
+          path: vector-search.json
+          if-no-files-found: ignore
