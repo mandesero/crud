@@ -1,12 +1,18 @@
 local server = require('luatest.server')
 local t = require('luatest')
+local path = require('test.path')
 
 local g = t.group('crud_vector_storage')
 
 g.before_all(function(cg)
     t.skip_if(type(box.internal.vector_icu_version) ~= 'function',
               'Requires Tarantool with VECTOR support')
-    cg.server = server:new()
+    cg.server = server:new({
+        env = {
+            LUA_PATH = path.LUA_PATH .. ';' .. package.path,
+            LUA_CPATH = package.cpath,
+        },
+    })
     cg.server:start()
 end)
 

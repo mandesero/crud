@@ -1,5 +1,6 @@
 local t = require('luatest')
 local server = require('luatest.server')
+local path = require('test.path')
 
 local g = t.group('crud_vector_cluster')
 
@@ -11,8 +12,14 @@ g.before_all(function(cg)
               sharding = {}}
     for i = 1, 2 do
         local rs = ('00000000-0000-0000-0000-%012d'):format(i)
-        local s = server:new({alias = 'crud-vector-s' .. i,
-                              box_cfg = {replicaset_uuid = rs}})
+        local s = server:new({
+            alias = 'crud-vector-s' .. i,
+            box_cfg = {replicaset_uuid = rs},
+            env = {
+                LUA_PATH = path.LUA_PATH .. ';' .. package.path,
+                LUA_CPATH = package.cpath,
+            },
+        })
         cg.storages[i] = s
         s:start()
         local uri = s:exec(function(address)
@@ -48,7 +55,13 @@ g.before_all(function(cg)
             box.schema.user.grant('reader', 'read', 'space', 'docs')
         end, {cg.cfg, (i - 1) * 10 + 1})
     end
-    cg.router = server:new({alias = 'crud-vector-router'})
+    cg.router = server:new({
+        alias = 'crud-vector-router',
+        env = {
+            LUA_PATH = path.LUA_PATH .. ';' .. package.path,
+            LUA_CPATH = package.cpath,
+        },
+    })
     cg.router:start()
     cg.router:exec(function(cfg)
         rawset(_G, 'vshard', require('vshard'))

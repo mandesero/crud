@@ -1,10 +1,16 @@
 local t = require('luatest')
 local server = require('luatest.server')
+local path = require('test.path')
 
 local g = t.group('vector_unavailable')
 
 g.before_all(function(cg)
-    cg.server = server:new()
+    cg.server = server:new({
+        env = {
+            LUA_PATH = path.LUA_PATH .. ';' .. package.path,
+            LUA_CPATH = package.cpath,
+        },
+    })
     cg.server:start()
 end)
 
