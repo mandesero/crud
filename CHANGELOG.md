@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+* Add experimental `crud.vector_search` for protected distributed VECTOR
+  search with the VECTOR-enabled Tarantool and vshard forks.
+
 ## [1.7.6] - 31-08-26
 
 ### Changed

@@ -21,6 +21,7 @@ return {
     DELETE = 'delete',
     -- SELECT identifies both `pairs` and `select`.
     SELECT = 'select',
+    VECTOR_SEARCH = 'vector_search',
     TRUNCATE = 'truncate',
     LEN = 'len',
     COUNT = 'count',

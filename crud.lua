@@ -13,6 +13,7 @@ local upsert = require('crud.upsert')
 local upsert_many = require('crud.upsert_many')
 local delete = require('crud.delete')
 local select = require('crud.select')
+local vector_search = require('crud.vector_search')
 local truncate = require('crud.truncate')
 local len = require('crud.len')
 local count = require('crud.count')
@@ -99,6 +100,10 @@ crud.delete = stats.wrap(delete.call, stats.op.DELETE)
 -- @refer select.call
 -- @function select
 crud.select = stats.wrap(select.call, stats.op.SELECT)
+
+-- @refer vector_search.call
+-- @function vector_search
+crud.vector_search = stats.wrap(vector_search.call, stats.op.VECTOR_SEARCH)
 
 -- @refer select.pairs
 -- @function pairs

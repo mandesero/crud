@@ -18,6 +18,7 @@ local upsert = require('crud.upsert')
 local upsert_many = require('crud.upsert_many')
 local delete = require('crud.delete')
 local select = require('crud.select')
+local vector_search = require('crud.vector_search')
 local truncate = require('crud.truncate')
 local len = require('crud.len')
 local count = require('crud.count')
@@ -78,6 +79,7 @@ local modules_with_storage_api = {
     upsert_many,
     delete,
     select,
+    vector_search,
     truncate,
     len,
     count,

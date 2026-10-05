@@ -1120,6 +1120,9 @@ errs[4].operation_data -- {92, 2040, "Artur", 29}
 
 ### Select
 
+For experimental nearest-neighbor search over VECTOR indexes, see
+[distributed VECTOR search](doc/vector-search.md).
+
 `CRUD` supports multi-conditional selects, treating a cluster as a single space.
 The conditions may include field names, as well as index names.
 (Refer to [#352](https://github.com/tarantool/crud/issues/352) for field number.)
