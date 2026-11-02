@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 * Add experimental `crud.vector_search` for protected distributed VECTOR
   search with the VECTOR-enabled Tarantool and vshard forks.
 
+### Changed
+* Use native VECTOR `index:search()` and parallel tuple/distance arrays on
+  storages. Keep the public distributed result and wire format unchanged.
+
 ## [1.7.6] - 31-08-26
 
 ### Changed

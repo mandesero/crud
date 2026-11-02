@@ -158,13 +158,12 @@ local function sort_records(records, def)
     end)
 end
 
-local function project(rows, def, deadline)
+local function project(tuples, distances, def, deadline)
     local records = array()
-    for i, row in ipairs(rows) do
+    for i, tuple in ipairs(tuples) do
         if i % 64 == 0 then
             remaining(deadline)
         end
-        local tuple = row.tuple
         local id = array()
         for j, part in ipairs(def.pk_parts) do
             id[j] = tuple[part.fieldno]
@@ -173,7 +172,7 @@ local function project(rows, def, deadline)
             id = id,
             bucket_id = tuple[def.bucket_fieldno],
             vector = tuple[def.vector_fieldno],
-            distance = row.distance,
+            distance = distances[i],
         }
     end
     return records
@@ -196,6 +195,9 @@ local function definition(space_name, index_name)
     if index == nil or index.type ~= 'VECTOR' or
        pk == nil or pk.id ~= 0 or bucket_index == nil then
         fail('VECTOR_INVALID', 'Invalid index configuration')
+    end
+    if type(index.search) ~= 'function' then
+        fail('VECTOR_UNSUPPORTED', 'Tarantool with VECTOR search is required')
     end
     local bucket_fieldno
     for i, field in ipairs(space:format()) do
@@ -263,21 +265,21 @@ function M.search(request, remaining_timeout)
         fail('VECTOR_COVERAGE', 'Protected vshard call is required')
     end
     local index = box.space[def.space].index[def.index]
-    -- Ownership is system metadata. Keep the user ACL for the data select.
+    -- Ownership is system metadata. Keep the user ACL for the data search.
     local buckets = box.session.su('admin', requested_buckets,
                                    request, context, def.max_buckets)
-    local select_opts = {
-        iterator = 'neighbor', limit = #buckets == 0 and 0 or request.L,
+    local search_opts = {
+        limit = #buckets == 0 and 0 or request.L,
         with_distance = true, timeout = remaining(deadline),
         filter = {field = def.bucket_field, values = buckets},
     }
     if algorithm_opts.ef_search ~= nil then
-        select_opts.opts = algorithm_opts
+        search_opts.opts = algorithm_opts
     end
-    local rows = index:select({request.query}, select_opts)
+    local tuples, distances = index:search(request.query, search_opts)
     local result = envelope(def)
     result.covered_bucket_ids = buckets
-    result.records = project(rows, def, deadline)
+    result.records = project(tuples, distances, def, deadline)
     sort_records(result.records, def)
     remaining(deadline)
     if #msgpack.encode(result) > def.max_response_bytes then
@@ -286,7 +288,7 @@ function M.search(request, remaining_timeout)
     return result
 end
 
--- VECTOR search can yield; CRUD's non-yielding DML dispatcher cannot be used.
+-- The protected vshard context must cover ownership checks and search.
 local function search_as_user(user, request, budget)
     return box.session.su(user, M.search, request, budget)
 end

@@ -7,6 +7,12 @@ vshard fork that provides protected call contexts and remaining map budgets:
 * vshard: `mandesero/vshard`, commit
   `674cda708d957cc145aa4f0622804bb5c2f8007a`.
 
+Storages require native `index:search(query, opts)` with parallel tuple and
+distance arrays, as specified by the RFC revision dated 2026-11-02. A core
+that only provides the older extended `select()` is rejected explicitly.
+CRUD projects these arrays into the same `{id, bucket_id, vector, distance}`
+records; its public API and storage wire format remain unchanged.
+
 The ordinary CRUD router/storage roles initialize vector search. No separate
 vector storage role or logical collection registration is required.
 Create a memtx space with a primary key, an unsigned `bucket_id` field, an
@@ -78,7 +84,7 @@ There is no cluster-wide snapshot across concurrent writes.
 
 The storage function follows CRUD's trusted router identity model: the
 transport user may execute `_crud.vector_search`, and the request carries the
-router caller's effective user. The data select runs as that user and checks
+router caller's effective user. The data search runs as that user and checks
 the space read privilege. Bucket ownership is read as admin, so applications
 do not need read access to `_bucket`. Transport credentials must be trusted;
 they can impersonate a caller, as with `_crud.call_on_storage`.

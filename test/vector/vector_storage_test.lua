@@ -63,6 +63,12 @@ g.test_storage_envelope_and_scope = function(cg)
             t.assert_equals(ok, false)
             t.assert_str_contains(tostring(err), fragment)
         end
+        local native_search = s.index.vec.search
+        s.index.vec.search = false
+        assert_error('Tarantool with VECTOR search', function()
+            storage.search(request, 1)
+        end)
+        s.index.vec.search = native_search
         local result = require('net.box').self:call(
             '_crud.vector_search', {'guest', request, 1})
         t.assert_equals(result.version, 1)
