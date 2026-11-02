@@ -1,11 +1,13 @@
 # CRUD VECTOR patchset report
 
-Date: 2026-10-05. CRUD base:
+Date: 2026-11-02. CRUD base:
 `13523e3719e4d49945197b35b884e6d65dd4ed92`.
-Native Tarantool code tree:
-`fae93a25e89211a3fb39ed1684b942a217eabf66` (GCC 13.3 Debug).
-The tested binary identifies the identical tree before commit-message
-normalization as `3.9.0-entrypoint-185-g8bd63fc90`.
+Current CRUD code: `2d28861`.
+Native Tarantool code:
+`43cff08243335275bb1cea5712a9964c0a96d25a` (GCC 13.3 Debug).
+The Ubuntu build reused a configured checkout with synchronized task
+sources. Its older `8bd63fc90` binary version label does not identify
+these updated sources. Measurement artifacts record the source commits.
 
 ## Repository split
 
@@ -16,7 +18,7 @@ The private ICU version helper stays in Tarantool because its native
 collations use ICU. USearch remains pinned at
 `0355958c08b22c642fc38ece00cd30646243b141`.
 
-CRUD owns the yielding storage endpoint, router validation and merge,
+CRUD owns the protected storage endpoint, router validation and merge,
 wire schema/PK/collation metadata, public API, stats and role integration.
 Its ordinary roles register `_crud.vector_search`; manual logical-index
 registration and a separate vector storage role are unnecessary.
@@ -27,16 +29,13 @@ follows CRUD's trusted router identity model. See the
 Generic bucket-reference context and remaining-time propagation stay in
 vshard at `674cda708d957cc145aa4f0622804bb5c2f8007a`.
 
-The rebuilt Tarantool series removes the three embedded `vector_search.*`
-modules, CMake/module registration, duplicate local storage/router tests,
-three-replicaset fixture, distributed benchmark and result, and obsolete
-storage-role changelog. Its native source tree is otherwise unchanged.
-CRUD now contains the full fixture, benchmark, workflow and distributed
-measurement history. The two series finish with their respective reports.
-
-The CRUD commits separate API/storage/router integration and focused tests,
-the full cluster fixture, distributed benchmark, companion CI, the
-child-process dependency regression fix, and this report. Backup branches preserve the previous published patchsets.
+The earlier split removed distributed modules and fixtures from Tarantool.
+The November RFC update adds native tuple-only IProto SELECT, rich
+`index:search(query, opts)` with parallel tuple/distance arrays, and
+cooperative generation rebuild. CRUD projects those arrays into its
+existing records. Public `crud.vector_search` and the version-1 storage
+wire format are unchanged. A core missing the search method is rejected
+explicitly. The companion workflow pins the new native code above.
 
 ## Reproduce
 
@@ -82,10 +81,10 @@ On the selected Ubuntu 24.04 x86_64 host, using the native-only binary:
   with leftover tuples and protected in-flight search, schema/protocol
   mismatch, reply overflow, timeout, promotion, snapshot/restart,
   storage errors and router disconnect/reconnect.
-- LuaCheck 0.25.0 reported zero warnings/errors in all 15 changed Lua files.
-- Tarantool's four ANN units and eight native Lua suites passed separately.
-- The earlier stock build compatibility run passed its one case and skipped
-  all eight VECTOR cases. Production CRUD code is unchanged since that run.
+- LuaCheck 0.23.0 reported zero warnings/errors in the two affected Lua files.
+- Tarantool's four ANN units and ten native Lua suite files passed separately.
+- The unavailable-feature compatibility case also passed on the installed
+  stock Tarantool `3.9.0-entrypoint-63-g0bf19dcc6` with no VECTOR support.
 
 ### CI child-process dependency regression
 
@@ -104,7 +103,7 @@ case passed and all eight VECTOR cases skipped. LuaCheck 0.25.0 found no
 warnings/errors in the four changed test files. The native implementation
 and public CRUD API are unchanged by this fix.
 
-## Distributed measurements
+## Historical distributed measurements
 
 [crud-split-isolated.json](vector-search-results/crud-split-isolated.json)
 contains the final isolated rerun: 300 deterministic records, five
@@ -134,16 +133,33 @@ original pre-port distributed acceptance result from the embedded Lua
 package, not a measurement of CRUD. These small fixed-sequence Debug
 runs do not establish production throughput or a general performance gain.
 
-## RFC revision 4 companion pin
+## November RFC update and measurements
 
-The companion VECTOR workflow now pins native code commit
-`ce2266beca78a77858b954fc50b5fad3ab6130ec`. It includes the corrected
-`slots.pending_rebuild` statistics, numeric contract, resource limits,
-cumulative local-search duration and ordinary-memtx tuple-binding GC.
-CRUD's 12 focused tests passed with this corrected binary on the selected
-Ubuntu host. The distributed protocol and production CRUD code are unchanged.
-The full fixture and benchmark were not repeated for this diagnostic update;
-the measurements above remain historical results of the earlier split.
+The companion workflow pins native code
+`43cff08243335275bb1cea5712a9964c0a96d25a`. The 12 focused cases, including
+storage ACLs, projection, lazy dependencies and an absent native search
+method, pass. The full fixture and all five benchmark profiles were rerun
+against this binary and the updated CRUD storage implementation.
+
+[The isolated result](vector-search-results/rfc-20261102-isolated.json)
+uses the same 300 records, 30 requests per profile and fixed thresholds.
+
+| Profile | p50 ms | p99 ms |
+| --- | ---: | ---: |
+| uniform_all_L10 | 11.49 | 21.66 |
+| skew_all_L10 | 6.75 | 15.07 |
+| skew_all_L20 | 9.85 | 43.12 |
+| single_bucket | 1.94 | 3.09 |
+| bucket_set | 3.15 | 18.12 |
+
+All five profiles meet the existing exploratory thresholds and return
+five records. Protected migration also passed. The
+[first result](vector-search-results/rfc-20261102-first.json) is preserved:
+its single-bucket p99 was 16.63 ms, exceeding the 10 ms threshold. The
+isolated rerun was launched after all native tests had finished; no
+threshold was changed. Thirty observations on a shared Debug host are
+sensitive to scheduling and do not establish a production latency SLO
+or a performance improvement over the historical measurements.
 
 ## Limits
 
