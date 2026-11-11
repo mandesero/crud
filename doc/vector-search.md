@@ -7,11 +7,13 @@ vshard fork that provides protected call contexts and remaining map budgets:
 * vshard: `mandesero/vshard`, commit
   `674cda708d957cc145aa4f0622804bb5c2f8007a`.
 
-Storages require native `index:search(query, opts)` with parallel tuple and
-distance arrays, as specified by the RFC revision dated 2026-11-02. A core
-that only provides the older extended `select()` is rejected explicitly.
+Storages require native `index:search(query, opts)` returning
+`tuples, nil, distances` with `with_distance = true`, as specified by the
+RFC revision dated 2026-11-11. A core that only provides the older extended
+`select()` is rejected explicitly.
 CRUD projects these arrays into the same `{id, bucket_id, vector, distance}`
-records; its public API and storage wire format remain unchanged.
+records. Packed varbinary fields are unpacked into numeric arrays during
+projection; the public API and storage wire format remain unchanged.
 
 The ordinary CRUD router/storage roles initialize vector search. No separate
 vector storage role or logical collection registration is required.

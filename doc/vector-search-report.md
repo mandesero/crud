@@ -2,9 +2,8 @@
 
 Date: 2026-11-02. CRUD base:
 `13523e3719e4d49945197b35b884e6d65dd4ed92`.
-Current CRUD code: `2d28861`.
-Native Tarantool code:
-`43cff08243335275bb1cea5712a9964c0a96d25a` (GCC 13.3 Debug).
+The November 2 verification below used CRUD code `2d28861` and native
+Tarantool `43cff08243335275bb1cea5712a9964c0a96d25a` (GCC 13.3 Debug).
 The Ubuntu build reused a configured checkout with synchronized task
 sources. Its older `8bd63fc90` binary version label does not identify
 these updated sources. Measurement artifacts record the source commits.
@@ -69,6 +68,23 @@ one router and three replicasets, with replicas in the first two.
 Omit the two benchmark variables to run only the correctness fixture.
 Python test-run dependencies, including `tarantool==0.12`, are required.
 The companion workflow records pinned source commits and dependency setup.
+
+## November 11 review update
+
+The companion workflow now pins native Tarantool
+`a0c699201bc8c92eca046da479736b0813f3f101`. Storage consumes the new
+`tuples, nil, distances` search result and projects packed varbinary
+coordinates into the existing numeric-array wire field. No wire version
+or public CRUD API changes are required. The vshard and USearch pins above
+are unchanged.
+
+All 12 focused tests passed on Ubuntu 24.04 with the GCC Debug native build,
+including packed projection, storage ACLs, unavailable-feature handling and
+existing CRUD caller-identity checks. LuaCheck 0.26.0 found zero warnings
+or errors in the two changed Lua files. Luatest was selected through a
+checkout-local dependency directory so runner and child processes used
+the same version. The three-replicaset fixture, benchmark profiles and
+hosted CI were not rerun for this update; their results below are historical.
 
 ## Verification
 

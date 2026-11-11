@@ -163,6 +163,21 @@ g.test_storage_envelope_and_scope = function(cg)
             storage.search(request, 1)
         end)
         s:drop()
+        s = box.schema.space.create('crud_vector_storage')
+        s:format({{name = 'id', type = 'unsigned'},
+                  {name = 'bucket_id', type = 'unsigned'},
+                  {name = 'embedding', type = 'varbinary'}})
+        s:create_index('pk')
+        s:create_index('bucket_id', {parts = {{2, 'unsigned'}},
+                                   unique = false})
+        s:create_index('vec', {type = 'vector', dimension = 2,
+                              distance = 'l2', unique = false,
+                              parts = {{3, 'varbinary'}}})
+        s:insert{1, 1, box.vector.pack({1, 0})}
+        result = storage.search(request, 1)
+        t.assert_equals(result.records[1].vector, {1, 0})
+        t.assert_equals(result.records[1].distance, 0)
+        s:drop()
         box.session.su('admin', box.schema.func.drop, '_crud.vector_search')
         rawset(_G, '_crud', nil)
         box.session.su('admin', box.schema.user.drop, 'vector_reader')

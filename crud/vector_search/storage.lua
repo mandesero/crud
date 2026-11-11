@@ -1,6 +1,7 @@
 local fiber = require('fiber')
 local key_def = require('key_def')
 local msgpack = require('msgpack')
+local varbinary = require('varbinary')
 local wire = require('crud.vector_search.wire')
 
 local M = {}
@@ -168,10 +169,14 @@ local function project(tuples, distances, def, deadline)
         for j, part in ipairs(def.pk_parts) do
             id[j] = tuple[part.fieldno]
         end
+        local vector = tuple[def.vector_fieldno]
+        if varbinary.is(vector) then
+            vector = box.vector.unpack(vector)
+        end
         records[i] = {
             id = id,
             bucket_id = tuple[def.bucket_fieldno],
-            vector = tuple[def.vector_fieldno],
+            vector = vector,
             distance = distances[i],
         }
     end
@@ -276,7 +281,7 @@ function M.search(request, remaining_timeout)
     if algorithm_opts.ef_search ~= nil then
         search_opts.opts = algorithm_opts
     end
-    local tuples, distances = index:search(request.query, search_opts)
+    local tuples, _, distances = index:search(request.query, search_opts)
     local result = envelope(def)
     result.covered_bucket_ids = buckets
     result.records = project(tuples, distances, def, deadline)
