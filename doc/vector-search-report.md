@@ -1,5 +1,40 @@
 # CRUD VECTOR patchset report
 
+## November 17 review update
+
+Current CRUD code: `e2b4c86883c37a0aa9277639a163eca95fd0dc6a`.
+The workflow pins native Tarantool
+`aa2d8bf5ec6d6667b34a633012c9fa846879699f`, which pins USearch
+`5c9595ed9a8d019570973c8647b62e6ba416ca6a`.
+The vshard pin remains `674cda708d957cc145aa4f0622804bb5c2f8007a`.
+These updates are local commits; hosted CI has not run on them.
+
+VECTOR storage now uses embedding fields only. Storage converts them with
+embedding.totable into the existing numeric-array wire records; ARRAY/BIN
+prototype fallbacks are removed. Embedding is loaded lazily, preserving
+CRUD startup and its unsupported-feature diagnostic on an ordinary core.
+Storage still consumes tuples, nil, distances: the middle result remains
+reserved for pagination. Query arrays and the public CRUD API are unchanged.
+The remaining timeout still travels through vshard to native search.
+
+All 12 focused tests passed on Ubuntu with the GCC Debug native build.
+The complete three-replicaset fixture passed with typed storage values,
+including migration, permissions, timeout and schema cases. Its five
+benchmark profiles completed 30 calls each with three participants.
+The complete fixture passed again after final fixture cleanup. LuaCheck
+reported no warnings or errors. Code/test/benchmark sources were included
+in the native report's 59-file local-to-Ubuntu SHA-256 comparison.
+These smoke measurements do not establish production scalability.
+
+Reproduction commands below still apply with the current pinned revisions.
+The disposable vshard checkout must include its recursive test-run
+submodule. Use the same Luatest version for the runner and child processes.
+
+## Historical verification
+
+The remaining sections describe earlier revisions and their test results;
+their storage formats and source pins are superseded by the update above.
+
 Date: 2026-11-02. CRUD base:
 `13523e3719e4d49945197b35b884e6d65dd4ed92`.
 The November 2 verification below used CRUD code `2d28861` and native
