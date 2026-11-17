@@ -9,11 +9,10 @@ vshard fork that provides protected call contexts and remaining map budgets:
 
 Storages require native `index:search(query, opts)` returning
 `tuples, nil, distances` with `with_distance = true`, as specified by the
-RFC revision dated 2026-11-11. A core that only provides the older extended
-`select()` is rejected explicitly.
+RFC revision dated 2026-11-17. A core without this search API is rejected.
 CRUD projects these arrays into the same `{id, bucket_id, vector, distance}`
-records. Packed varbinary fields are unpacked into numeric arrays during
-projection; the public API and storage wire format remain unchanged.
+records. Stored embedding values are projected into numeric arrays; the wire
+payload contains portable components without requiring embedding on routers.
 
 The ordinary CRUD router/storage roles initialize vector search. No separate
 vector storage role or logical collection registration is required.
@@ -27,12 +26,12 @@ The `float32` primary key type cannot be compared after MsgPack transport.
 local s = box.schema.space.create('documents')
 s:format({{name = 'id', type = 'unsigned'},
           {name = 'bucket_id', type = 'unsigned'},
-          {name = 'embedding', type = 'array'}})
+          {name = 'embedding', type = 'embedding'}})
 s:create_index('primary')
 s:create_index('bucket_id', {unique = false, parts = {{2, 'unsigned'}}})
 s:create_index('embedding', {
     type = 'vector', dimension = 3, distance = 'cosine',
-    unique = false, parts = {{3, 'array'}},
+    unique = false, parts = {{3, 'embedding'}},
 })
 require('crud').init_storage()
 

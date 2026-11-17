@@ -1,7 +1,6 @@
 local fiber = require('fiber')
 local key_def = require('key_def')
 local msgpack = require('msgpack')
-local varbinary = require('varbinary')
 local wire = require('crud.vector_search.wire')
 
 local M = {}
@@ -160,6 +159,7 @@ local function sort_records(records, def)
 end
 
 local function project(tuples, distances, def, deadline)
+    local embedding = require('embedding')
     local records = array()
     for i, tuple in ipairs(tuples) do
         if i % 64 == 0 then
@@ -169,10 +169,7 @@ local function project(tuples, distances, def, deadline)
         for j, part in ipairs(def.pk_parts) do
             id[j] = tuple[part.fieldno]
         end
-        local vector = tuple[def.vector_fieldno]
-        if varbinary.is(vector) then
-            vector = box.vector.unpack(vector)
-        end
+        local vector = embedding.totable(tuple[def.vector_fieldno])
         records[i] = {
             id = id,
             bucket_id = tuple[def.bucket_fieldno],

@@ -40,16 +40,16 @@ g.test_storage_envelope_and_scope = function(cg)
         local s = box.schema.space.create('crud_vector_storage')
         s:format({{name = 'id', type = 'unsigned'},
                   {name = 'bucket_id', type = 'unsigned'},
-                  {name = 'embedding', type = 'array'}})
+                  {name = 'embedding', type = 'embedding'}})
         s:create_index('pk')
         s:create_index('bucket_id', {parts = {{2, 'unsigned'}},
                                   unique = false})
         s:create_index('vec', {type = 'vector', dimension = 2,
                                distance = 'l2', unique = false,
-                               parts = {{3, 'array'}}})
-        s:insert{1, 1, {1, 0}}
-        s:insert{2, 2, {0.9, 0.1}}
-        s:insert{3, 3, {1, 0}}
+                               parts = {{3, 'embedding'}}})
+        s:insert{1, 1, require('embedding').new({1, 0})}
+        s:insert{2, 2, require('embedding').new({0.9, 0.1})}
+        s:insert{3, 3, require('embedding').new({1, 0})}
         local storage = require('crud.vector_search.storage')
         local request = {space = 'crud_vector_storage', index = 'vec',
                          query = {1, 0}, L = 3, scope = {kind = 'all'}}
@@ -162,21 +162,6 @@ g.test_storage_envelope_and_scope = function(cg)
         assert_error('Invalid index configuration', function()
             storage.search(request, 1)
         end)
-        s:drop()
-        s = box.schema.space.create('crud_vector_storage')
-        s:format({{name = 'id', type = 'unsigned'},
-                  {name = 'bucket_id', type = 'unsigned'},
-                  {name = 'embedding', type = 'varbinary'}})
-        s:create_index('pk')
-        s:create_index('bucket_id', {parts = {{2, 'unsigned'}},
-                                   unique = false})
-        s:create_index('vec', {type = 'vector', dimension = 2,
-                              distance = 'l2', unique = false,
-                              parts = {{3, 'varbinary'}}})
-        s:insert{1, 1, box.vector.pack({1, 0})}
-        result = storage.search(request, 1)
-        t.assert_equals(result.records[1].vector, {1, 0})
-        t.assert_equals(result.records[1].distance, 0)
         s:drop()
         box.session.su('admin', box.schema.func.drop, '_crud.vector_search')
         rawset(_G, '_crud', nil)

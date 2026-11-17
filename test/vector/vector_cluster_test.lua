@@ -43,13 +43,13 @@ g.before_all(function(cg)
             local space = box.schema.space.create('docs')
             space:format({{name = 'id', type = 'unsigned'},
                           {name = 'bucket_id', type = 'unsigned'},
-                          {name = 'embedding', type = 'array'}})
+                          {name = 'embedding', type = 'embedding'}})
             space:create_index('pk')
             space:create_index('bucket_id', {parts = {{2, 'unsigned'}},
                                              unique = false})
             space:create_index('vec', {type = 'vector', dimension = 2,
                                        distance = 'l2', unique = false,
-                                       parts = {{3, 'array'}}})
+                                       parts = {{3, 'embedding'}}})
             require('crud').init_storage({async = false})
             box.schema.user.create('reader')
             box.schema.user.grant('reader', 'read', 'space', 'docs')
@@ -71,8 +71,10 @@ g.before_all(function(cg)
     end, {cg.cfg})
     cg.router:exec(function()
         local crud = require('crud')
-        for _, tuple in ipairs({{1, 1, {1, 0}}, {2, 11, {0, 1}},
-                                 {3, 1, {1, 0}}}) do
+        local embedding = require('embedding')
+        for _, tuple in ipairs({{1, 1, embedding.new({1, 0})},
+                                 {2, 11, embedding.new({0, 1})},
+                                 {3, 1, embedding.new({1, 0})}}) do
             local result, err = crud.insert('docs', tuple,
                                             {bucket_id = tuple[2]})
             assert(result, tostring(err))
@@ -154,7 +156,7 @@ g.test_migration_and_schema_mismatch = function(cg)
         assert(require('vshard').storage.bucket_send(1, target,
                                                      {timeout = 5}))
         -- A leftover tuple must not become a duplicate search result.
-        box.space.docs:replace{99, 1, {1, 0}}
+        box.space.docs:replace{99, 1, require('embedding').new({1, 0})}
     end, {target})
     cg.router:exec(function()
         local rows, err = require('crud').vector_search(

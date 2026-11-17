@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: mandesero/tarantool
-          ref: a0c699201bc8c92eca046da479736b0813f3f101
+          ref: aa2d8bf5ec6d6667b34a633012c9fa846879699f
           path: .vector-core
           submodules: recursive
       - uses: ./.vector-core/.github/actions/install-deps-debian

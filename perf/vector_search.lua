@@ -12,7 +12,8 @@ local inserted = {}
 for id = 1000, 1299 do
     local uniform = id < 1150
     local bucket_id = uniform and (id * 37) % 3000 + 1 or 1
-    local vector = {uniform and 100 or -100, id / 1000}
+    local vector = require('embedding').new({uniform and 100 or -100,
+                                              id / 1000})
     local tuple = {id, bucket_id, vector}
     assert(vrouter:callrw(bucket_id, 'space_insert',
                           {'vector_docs', tuple}))

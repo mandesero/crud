@@ -16,13 +16,13 @@ local setup = [[
     local s = box.schema.space.create('vector_docs', {if_not_exists = true})
     s:format({{name = 'id', type = 'unsigned'},
               {name = 'bucket_id', type = 'unsigned'},
-              {name = 'embedding', type = 'array'}})
+              {name = 'embedding', type = 'embedding'}})
     s:create_index('pk', {if_not_exists = true})
     s:create_index('bucket_id', {if_not_exists = true, unique = false,
                                  parts = {{2, 'unsigned'}}})
     s:create_index('vec', {if_not_exists = true, type = 'vector',
                            dimension = 2, distance = 'l2',
-                           unique = false, parts = {{3, 'array'}}})
+                           unique = false, parts = {{3, 'embedding'}}})
     require('crud').init_storage({async = false})
     return true
 ]]
@@ -39,13 +39,14 @@ local router_setup = [[
 ]]
 
 local search = [[
+    local embedding = require('embedding')
     local router = rawget(_G, 'vector_fixture_router')
     assert(vshard.router.callrw(1, 'space_insert',
-           {'vector_docs', {1, 1, {1, 0}}}))
+           {'vector_docs', {1, 1, embedding.new({1, 0})}}))
     assert(vshard.router.callrw(1001, 'space_insert',
-           {'vector_docs', {2, 1001, {0.9, 0.1}}}))
+           {'vector_docs', {2, 1001, embedding.new({0.9, 0.1})}}))
     assert(vshard.router.callrw(2001, 'space_insert',
-           {'vector_docs', {3, 2001, {0, 1}}}))
+           {'vector_docs', {3, 2001, embedding.new({0, 1})}}))
     local result = router.search({1, 0},
                                  {k = 3, L = 3, timeout = 5})
     assert(#result == 3 and result[1].id[1] == 1 and
@@ -137,9 +138,10 @@ local function run()
         return true
     ]])
     eval('router_1', [[
+        local embedding = require('embedding')
         for id = 10, 29 do
             assert(vshard.router.callrw(1001, 'space_insert',
-                   {'vector_docs', {id, 1001, {9, id}}}))
+                   {'vector_docs', {id, 1001, embedding.new({9, id})}}))
         end
         local result = rawget(_G, 'vector_fixture_router').search(
             {1, 0}, {k = 1, L = 2, timeout = 5,
@@ -150,11 +152,13 @@ local function run()
     eval('router_1', [=[
         local fiber = require('fiber')
         local ffi = require('ffi')
+        local embedding = require('embedding')
         local router = rawget(_G, 'vector_fixture_router')
         local writer = fiber.new(function()
             for id = 30, 49 do
                 assert(vshard.router.callrw(1001, 'space_insert',
-                       {'vector_docs', {id, 1001, {10, id}}}))
+                       {'vector_docs', {id, 1001,
+                                        embedding.new({10, id})}}))
             end
         end)
         writer:set_joinable(true)
@@ -226,8 +230,11 @@ local function run()
     local target = source % #names + 1
     eval(names[source], "return vshard.storage.bucket_send(1, '" ..
          util.replicasets[target] .. "', {timeout = 10})")
-    eval(names[source],
-         'box.space.vector_docs:insert{99, 1, {1, 0}} return true')
+    eval(names[source], [[
+        local embedding = require('embedding')
+        box.space.vector_docs:insert{99, 1, embedding.new({1, 0})}
+        return true
+    ]])
     eval('router_1', after_move)
     local ref_source
     for i, name in ipairs(names) do
